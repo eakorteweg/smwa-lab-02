@@ -85,7 +85,7 @@ library(modelsummary)
 1. Load the data. The data is stored as a Stata dataset, so it can be loaded with the `read_dta()` function from `haven`.
 
 ```{r}
-# Write your answer here
+data <- read_dta("data/sasp_panel.dta")
 ```
 
 
@@ -97,7 +97,9 @@ library(modelsummary)
 Write a short command to drop any rows which have missing values from the data.
 
 ```{r}
-# Write your answer here
+data <- 
+    data %>%
+    na.omit(data)
 ```
 
 
@@ -109,7 +111,12 @@ Your plot should therefore have two histograms, potentially overlaying each othe
 Does there appear to be a difference in price between safe and unsafe sex?
 
 ```{r}
-# Write your answer here
+ggplot(data = data, aes(x=lnw, fill = factor(unsafe))) + 
+geom_histogram(aes(y = stat(count/sum(count))), alpha = 0.6) + 
+scale_fill_manual(values=c("#69b3a2", "#404080")) + 
+ylab("Fraction of Bookings") +
+xlab("Log Hourly Wage") + 
+theme_bw()
 ```
 
 4. Let's formalize this idea with a regression.
@@ -117,19 +124,24 @@ Run a single variable regression of log hourly wage, `lnw` on the variable `unsa
 Report the results.
 
 ```{r}
-# Write your answer here
+model_1 <- lm(lnw ~ unsafe, data = data)
+tidy(model_1, conf.int = TRUE)
 ```
 
 
 5. Interpret the coefficient on `unsafe`.
 Is it statistically significant?
 
-Write your answer here
+On average, unsafe sex is associated with a decrease in log hourly wage by 0.035. 
+On average, unsafe sex is associated with a decrease in hourly wage by approximately 3.5%. 
+The p-value is 0.1978 > 0.05 which means that the effect is not statistically significant at the 5% level of significance.
 
 6. A single variable regression most likely suffers from omitted variable bias. 
 Explain what omitted variable bias is, and why it might impact your regression estimates.
 
-Write your answer here
+The omitted variable bias occurs when a statistical model leaves out one or more relevant variables. This leads that the effect of another variable is linked to the existing variable in the model which leads to biased results.
+
+The effect of leaving out one or more relevant variables on the regression coefficients in the "misspecified" regression. For omitted variable bias to occur we need: (1) the included X variable to be correlated with the omitted variable, and (2) the omitted variable to be a relevant determinant of y. These two statements lead to a violation of the exogeneity assumption which means that our estimated coefficient cannot accurately estimate the true population parameter, and this can't be interpreted causally.
 
 
 7. Add the log of the length of the session, `llength`, as a second variable to your regression.
@@ -137,33 +149,42 @@ Report the results.
 Did the coefficient on `unsafe` change?
 
 ```{r}
-# Write your answer here
+model_2 <- lm(lnw ~ unsafe + llength, data = data)
+tidy(model_2, conf.int = TRUE)
 ```
 
 
 8. Explain why ignoring `llength` in your regression led to the coefficient on `unsafe` to be different in sign in the single variable regression than in the two variable regression.
 
-Write your answer here
+It might be due to the fact of the omitted variable bias since the length of a session influences the price (for example discounts for longer sessions) and that there is a correlation between the length and unsafe sex (longer sessions are more likely to feature unsafe sex). Therefore, including the variable llength, decreases this bias and changes the (biased) results. 
 
 9.  Add a third variable to the regression, whether the client is a regular or not (`reg` in the data).
 Report your results and comment on any change in the regression estimate of `unsafe`.
 
 ```{r}
-# Write your answer here
+model_3 <- lm(lnw ~ unsafe + reg + llength, data = data)
+tidy(model_3, conf.int = TRUE)
 ```
 
 
 10. When discussing your interim results with a friend who is a bit of a statistical whiz they make the following remark: "I think you're not getting the expected results due to unobserved heterogeneity. Try adding fixed effects for each provider."
 What is unobserved heterogeneity? Why might it matter?
 
-Write your answer here
+Unobserved heterogeneity means that there are unmeasured differences between the sex workers in the sample that are associated with the variables of interest. This might lead to biased results. 
+
+We have not included any variable about the sex worker so far - and there might be something about them that influences the prices they charge and their willingness to engage in unsafe sex.
 
 11. The data has a unique identifier for each provider in the `id` column.
 Use the `feols()` command from the `fixest` package to re-estimate your regression in (9) adding the provider ID fixed effects.
 Report your results with 'normal' standard errors (i.e. no clustering).
 
 ```{r}
-# Write your answer here
+model_4 <- feols(lnw ~ unsafe + reg + llength 
+                 | 
+                     id, 
+                 data = data)
+
+tidy(model_4, se = 'standard', conf.int = TRUE)
 ```
 
 
@@ -171,7 +192,11 @@ Report your results with 'normal' standard errors (i.e. no clustering).
 Is the coefficient on `unsafe` now statistically significant?
 Is the coefficient large from a 'marketing' viewpoint?
 
-Write your answer here
+On average, unsafe sex increases the hourly wage by approx 4.8 percent (when holding other variables constant). 
+
+The effect is statistically significant at the 10 percent level of significance but not at the 5 percent level. 
+Is that big? It is approximately a 5 percent increase which is on average a change of 14 euros for the hourly wage which isnt that much.
+
 
 Your next concern should be the standard errors - and whether we have 'correctly' adjusted for heteroskedasticity and/or clustering.
 
@@ -183,7 +208,9 @@ Does there appear to be evidence of heteroskedasticity?
 
 
 ```{r}
-# Write your answer here
+data <- data %>%
+    mutate(resid = residuals(model_4), 
+           fitted = predict(model_4))
 ```
 
 
