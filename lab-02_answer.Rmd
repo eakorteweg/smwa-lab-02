@@ -211,6 +211,13 @@ Does there appear to be evidence of heteroskedasticity?
 data <- data %>%
     mutate(resid = residuals(model_4), 
            fitted = predict(model_4))
+
+data %>%
+    ggplot(aes(x=fitted, y = resid)) + 
+    geom_point() +
+    geom_smooth() +
+    theme_bw() + 
+    ggtitle("Not much evidence of heteroskedasticity")
 ```
 
 
@@ -220,7 +227,7 @@ Does the standard error on `unsafe` change by much?
 Is this consistent with what you found graphically above?
 
 ```{r}
-# Write your answer here
+tidy(model_4, se = "hetero", conf.int = TRUE)
 ```
 
 
@@ -229,7 +236,7 @@ Again, you might be able to do this **without** re-estimating the regression mod
 Why might you want to cluster the standard errors this way?
 
 ```{r}
-# Write your answer here
+tidy(model_4, se = "cluster", conf.int = TRUE)
 ```
 
 
@@ -240,17 +247,25 @@ Do this by modifying your regression command from (11).
 Report your results and discuss your findings.
 
 ```{r}
-# Write your answer here
+model_5 <- feols(lnw ~ unsafe:reg + unsafe + reg + llength 
+                 | 
+                     id, 
+                 cluster = ~id,
+                 data = data)
+
+tidy(model_5, se = 'standard', conf.int = TRUE)
 ```
 
 
 17. Interpret the results you found in (16).
 
-Write your answer here
+Providers charge a higher price for unsafe sex with clients who are regulars than those who aren't. A potential reason could be that regulars are less likely to switch to a different provider, so they're taken advantage of and charged a higher premium. 
 
 18. Are the effects you documented *causal*, *descriptive* or *predictive*?  Explain your answer.
 
-Write your answer here
+For the heterogeneity results, descriptive. There's a bunch of "selection on unobservables" issues and potentially omitted variables that would make me nervous about causal interpretation. 
+
+For the earlier regressions: the authors of the survey would probably argue towards causal interpretation after adding the fixed effects for the provider. Essentially they'd argue that the coefficient on unsafe is being estimated by differences in wages between unsafe and safe sex within each provider.
 
 Now that you have run a series of regressions, you want to present the results in a way that you could use in a report or a presentation.
 
@@ -259,14 +274,34 @@ You can choose any of the estimates you like to produce the table, but we encour
 The final result should look similar to a regression table you see in academic publications.
 
 ```{r}
-# Write your answer here
+mods <- list(
+    model_1, 
+    model_2, 
+    model_3, 
+    model_4
+)
+
+msummary(mods)
 ```
 
 20. Take your regression estimates and produce a coefficient plot to summarize four of them in one place. 
 You can choose any of the estimates you like to produce the plot, but we encourage you to think about the plot you produce can be used as part of a story you could tell to explain your findings.
 
 ```{r}
-# Write your answer here
+mods <- list(
+    model_1,
+    model_2,
+    model_3
+)
+
+modelplot(mods,
+          coef_omit = "Interc|reg|ll") +
+    geom_vline(xintercept = 0,
+               alpha = 0.5,
+               linetype = "dashed") +
+    xlab("Coefficient Estimate + 95% CI") +
+    coord_flip() +
+    theme_bw()
 ```
 
 ## License
